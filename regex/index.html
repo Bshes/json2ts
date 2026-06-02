@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regex Tester - DevForge</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
+  .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #30363d; }
+  .logo { font-size: 24px; font-weight: 700; color: #58a6ff; }
+  .logo span { color: #f0f6fc; }
+  .back-link { color: #58a6ff; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+  .back-link:hover { text-decoration: underline; }
+  .pro-badge { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .panel { background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; margin-top: 20px; }
+  .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #1c2128; border-bottom: 1px solid #30363d; font-size: 14px; font-weight: 600; }
+  .panel-header .actions { display: flex; gap: 8px; }
+  textarea, .regex-input { width: 100%; background: transparent; border: none; color: #c9d1d9; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 13px; padding: 16px; outline: none; }
+  textarea { height: 250px; resize: vertical; }
+  textarea::placeholder { color: #484f58; }
+  .regex-input { background: #0d1117; height: 48px; font-size: 16px; }
+  .regex-input.invalid { color: #f85149; }
+  .flags-row { display: flex; gap: 8px; padding: 8px 16px; background: #1c2128; border-bottom: 1px solid #30363d; flex-wrap: wrap; align-items: center; }
+  .flags-row label { font-size: 13px; color: #8b949e; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+  .flags-row input[type="checkbox"] { accent-color: #58a6ff; }
+  .flags-row .badge { font-size: 11px; color: #8b949e; background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 2px 6px; }
+  .status-bar { display: flex; gap: 20px; padding: 8px 16px; background: #0d1117; font-size: 12px; color: #8b949e; border-bottom: 1px solid #30363d; }
+  .status-bar .match { color: #3fb950; }
+  .status-bar .no-match { color: #f85149; }
+  .match-highlight { background: #58a6ff33; border-radius: 2px; }
+  .match-highlight.active { background: #58a6ff66; }
+  .btn { padding: 6px 16px; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; cursor: pointer; font-size: 13px; transition: all .2s; }
+  .btn:hover { background: #30363d; }
+  .btn-primary { background: #238636; border-color: #2ea043; color: #fff; }
+  .btn-primary:hover { background: #2ea043; }
+  .footer { text-align: center; padding: 32px 0; color: #484f58; font-size: 13px; }
+  .footer a { color: #58a6ff; text-decoration: none; }
+  .replace-row { display: flex; gap: 8px; padding: 8px 16px; background: #1c2128; border-bottom: 1px solid #30363d; align-items: center; }
+  .replace-row label { font-size: 13px; color: #8b949e; white-space: nowrap; }
+  .replace-row input { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 4px 8px; color: #c9d1d9; font-size: 13px; outline: none; flex: 1; }
+  .replace-row input:focus { border-color: #58a6ff; }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #238636; color: #fff; padding: 12px 24px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .3s; z-index: 100; }
+  .toast.show { opacity: 1; }
+  .toast.error { background: #da3633; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <a href="../" class="back-link">← DevForge</a>
+    <div class="logo">Regex <span>Tester</span></div>
+    <span class="pro-badge">Free</span>
+  </header>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span>Regular Expression</span>
+      <div class="actions">
+        <button class="btn" onclick="document.getElementById('regex').value='';document.getElementById('replaceText').value='';testRegex()">Clear</button>
+      </div>
+    </div>
+    <div class="flags-row">
+      <label><input type="checkbox" id="flagG" checked onchange="testRegex()"> g</label>
+      <label><input type="checkbox" id="flagI" onchange="testRegex()"> i</label>
+      <label><input type="checkbox" id="flagM" onchange="testRegex()"> m</label>
+      <label><input type="checkbox" id="flagS" onchange="testRegex()"> s</label>
+      <label><input type="checkbox" id="flagU" onchange="testRegex()"> u</label>
+      <label><input type="checkbox" id="flagY" onchange="testRegex()"> y</label>
+      <span class="badge">Flags</span>
+    </div>
+    <input type="text" id="regex" class="regex-input" placeholder="Enter regex pattern..." oninput="testRegex()" spellcheck="false">
+    <div class="replace-row">
+      <label>Replace with:</label>
+      <input type="text" id="replaceText" placeholder="$1 - uppercase" oninput="testRegex()">
+      <button class="btn" onclick="doReplace()">Replace All</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span>Test String</span>
+      <div class="actions">
+        <button class="btn" onclick="document.getElementById('testStr').value=sampleText;testRegex()">Sample</button>
+      </div>
+    </div>
+    <div class="status-bar" id="statusBar">
+      <span>⏳ Type to test...</span>
+    </div>
+    <textarea id="testStr" placeholder="Enter test string here..." oninput="testRegex()" spellcheck="false">Hello world! Email: john@example.com, support@devforge.app. Visit https://devforge.app</textarea>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span>Result</span>
+      <div class="actions">
+        <button class="btn" onclick="copyOutput()">Copy</button>
+      </div>
+    </div>
+    <textarea id="resultArea" placeholder="Matches will appear here..." readonly style="height:150px;cursor:default"></textarea>
+  </div>
+
+  <div class="footer">
+    Built by <a href="https://dev.to/bshes">@Bshes</a> &mdash; <a href="../">All DevForge tools</a>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const sampleText = `Hello world! Email: john@example.com, support@devforge.app
+Visit https://devforge.app for tools.
+Call me at +1-555-123-4567 or (555) 987-6543.
+
+const code = "Hello, World!";
+const date = "2024-01-15";
+const price = 19.99;
+const active = true;`;
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function buildRegex() {
+  const pattern = document.getElementById('regex').value;
+  if (!pattern) return null;
+  try {
+    const flags = (document.getElementById('flagG').checked ? 'g' : '') +
+      (document.getElementById('flagI').checked ? 'i' : '') +
+      (document.getElementById('flagM').checked ? 'm' : '') +
+      (document.getElementById('flagS').checked ? 's' : '') +
+      (document.getElementById('flagU').checked ? 'u' : '') +
+      (document.getElementById('flagY').checked ? 'y' : '');
+    return new RegExp(pattern, flags || 'g');
+  } catch { return null; }
+}
+
+function testRegex() {
+  const regex = buildRegex();
+  const input = document.getElementById('regex');
+  const testStr = document.getElementById('testStr').value;
+  const statusBar = document.getElementById('statusBar');
+  const resultArea = document.getElementById('resultArea');
+
+  if (!document.getElementById('regex').value) {
+    input.className = 'regex-input';
+    statusBar.innerHTML = '<span>Enter a regex pattern to test</span>';
+    resultArea.value = '';
+    return;
+  }
+
+  if (!regex) {
+    input.className = 'regex-input invalid';
+    statusBar.innerHTML = '<span style="color:#f85149">Invalid regex pattern</span>';
+    resultArea.value = '';
+    return;
+  }
+
+  input.className = 'regex-input';
+  const matches = [...testStr.matchAll(regex)];
+  const matchCount = matches.length;
+
+  if (matchCount === 0) {
+    statusBar.innerHTML = `<span class="no-match">✗ No matches</span>`;
+    resultArea.value = '';
+    return;
+  }
+
+  statusBar.innerHTML = `<span class="match">✓ ${matchCount} match${matchCount > 1 ? 'es' : ''}</span>`;
+  resultArea.value = matches.map((m, i) => {
+    const groups = m.groups && Object.keys(m.groups).length
+      ? '\n  Groups: ' + JSON.stringify(m.groups)
+      : '';
+    return `[${i + 1}] "${m[0]}" (index: ${m.index})${groups}`;
+  }).join('\n');
+}
+
+function doReplace() {
+  const regex = buildRegex();
+  const replaceWith = document.getElementById('replaceText').value;
+  const testStr = document.getElementById('testStr').value;
+
+  if (!regex || !testStr) {
+    showToast('Enter pattern and test string first', true);
+    return;
+  }
+
+  const result = testStr.replace(regex, replaceWith);
+  document.getElementById('resultArea').value = result;
+  document.getElementById('statusBar').innerHTML = `<span class="match">✓ Replaced</span>`;
+  showToast('Replaced successfully');
+}
+
+function copyOutput() {
+  const text = document.getElementById('resultArea').value;
+  if (!text) { showToast('Nothing to copy', true); return; }
+  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    showToast('Copied to clipboard');
+  });
+}
+</script>
+</body>
+</html>

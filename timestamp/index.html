@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timestamp Converter - DevForge</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
+  .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #30363d; }
+  .logo { font-size: 24px; font-weight: 700; color: #58a6ff; }
+  .logo span { color: #f0f6fc; }
+  .back-link { color: #58a6ff; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+  .back-link:hover { text-decoration: underline; }
+  .pro-badge { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .panel { background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; margin-top: 20px; }
+  .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #1c2128; border-bottom: 1px solid #30363d; font-size: 14px; font-weight: 600; }
+  .panel-header .actions { display: flex; gap: 8px; }
+  .input-group { display: flex; gap: 12px; padding: 20px; align-items: center; flex-wrap: wrap; }
+  .input-group label { font-size: 13px; color: #8b949e; }
+  .input-group input { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px 12px; color: #c9d1d9; font-size: 14px; outline: none; font-family: 'JetBrains Mono', 'Fira Code', monospace; flex: 1; min-width: 200px; }
+  .input-group input:focus { border-color: #58a6ff; }
+  .input-group select { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 8px; color: #c9d1d9; font-size: 13px; outline: none; }
+  .input-group .btn { padding: 8px 20px; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; cursor: pointer; font-size: 13px; transition: all .2s; }
+  .input-group .btn:hover { background: #30363d; }
+  .input-group .btn-primary { background: #238636; border-color: #2ea043; color: #fff; }
+  .input-group .btn-primary:hover { background: #2ea043; }
+  .result-box { padding: 20px; border-top: 1px solid #30363d; }
+  .result-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1c2128; }
+  .result-row:last-child { border-bottom: none; }
+  .result-row .label { color: #8b949e; font-size: 13px; }
+  .result-row .value { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 13px; }
+  .result-row .value.primary { color: #58a6ff; font-weight: 600; }
+  .converter-tabs { display: flex; gap: 0; padding: 8px 16px; background: #1c2128; border-bottom: 1px solid #30363d; }
+  .converter-tab { padding: 8px 24px; border: 1px solid #30363d; background: #161b22; color: #8b949e; cursor: pointer; font-size: 13px; }
+  .converter-tab:first-child { border-radius: 4px 0 0 4px; }
+  .converter-tab:last-child { border-radius: 0 4px 4px 0; }
+  .converter-tab.active { background: #238636; color: #fff; border-color: #2ea043; }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #238636; color: #fff; padding: 12px 24px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .3s; z-index: 100; }
+  .toast.show { opacity: 1; }
+  .toast.error { background: #da3633; }
+  .footer { text-align: center; padding: 32px 0; color: #484f58; font-size: 13px; }
+  .footer a { color: #58a6ff; text-decoration: none; }
+  .quick-links { display: flex; gap: 8px; padding: 8px 16px; background: #1c2128; border-bottom: 1px solid #30363d; flex-wrap: wrap; }
+  .quick-link { padding: 2px 10px; border-radius: 12px; border: 1px solid #30363d; background: transparent; color: #8b949e; cursor: pointer; font-size: 11px; }
+  .quick-link:hover { border-color: #58a6ff; color: #58a6ff; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <a href="../" class="back-link">← DevForge</a>
+    <div class="logo">Timestamp <span>Converter</span></div>
+    <span class="pro-badge">Free</span>
+  </header>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span>Unix Timestamp ↔ Date</span>
+      <div class="actions">
+        <button class="btn" onclick="setNow()">Now</button>
+      </div>
+    </div>
+    <div class="converter-tabs">
+      <div class="converter-tab active" id="ctabUnix" onclick="switchConv('unix')">Unix → Date</div>
+      <div class="converter-tab" id="ctabDate" onclick="switchConv('date')">Date → Unix</div>
+    </div>
+    <div class="input-group">
+      <label>Value:</label>
+      <input type="text" id="convInput" placeholder="Enter Unix timestamp or date..." value="1717430400">
+      <select id="timezone">
+        <option value="local">Local</option>
+        <option value="UTC">UTC</option>
+      </select>
+      <button class="btn btn-primary" onclick="convert()">Convert</button>
+    </div>
+    <div class="result-box" id="resultBox">
+      <div class="result-row">
+        <span class="label">Unix Timestamp (seconds)</span>
+        <span class="value" id="rSeconds">1717430400</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Unix Timestamp (milliseconds)</span>
+        <span class="value" id="rMillis">1717430400000</span>
+      </div>
+      <div class="result-row">
+        <span class="label">ISO 8601</span>
+        <span class="value primary" id="rISO">2024-06-03T12:00:00.000Z</span>
+      </div>
+      <div class="result-row">
+        <span class="label">UTC Date</span>
+        <span class="value" id="rUTC">Mon, 03 Jun 2024 12:00:00 GMT</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Relative</span>
+        <span class="value" id="rRelative">2 years ago</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Built by <a href="https://dev.to/bshes">@Bshes</a> &mdash; <a href="../">All DevForge tools</a>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+let convMode = 'unix';
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function switchConv(mode) {
+  convMode = mode;
+  document.getElementById('ctabUnix').className = 'converter-tab' + (mode === 'unix' ? ' active' : '');
+  document.getElementById('ctabDate').className = 'converter-tab' + (mode === 'date' ? ' active' : '');
+  document.getElementById('convInput').placeholder = mode === 'unix' ? 'Enter Unix timestamp...' : 'Enter date (e.g., 2024-06-03 or 2024-06-03T12:00:00)...';
+  document.getElementById('resultBox').querySelectorAll('.result-row .value').forEach(el => el.textContent = '—');
+}
+
+function setNow() {
+  document.getElementById('convInput').value = Math.floor(Date.now() / 1000);
+  convMode = 'unix';
+  switchConv('unix');
+  convert();
+}
+
+function relativeTime(date) {
+  const now = Date.now();
+  const diff = now - date.getTime();
+  const abs = Math.abs(diff);
+  const seconds = Math.floor(abs / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  const months = Math.floor(days / 30);
+  const years = Math.floor(days / 365);
+
+  const prefix = diff > 0 ? 'ago' : 'from now';
+  if (years > 0) return `${years} year${years > 1 ? 's' : ''} ${prefix}`;
+  if (months > 0) return `${months} month${months > 1 ? 's' : ''} ${prefix}`;
+  if (days > 0) return `${days} day${days > 1 ? 's' : ''} ${prefix}`;
+  if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ${prefix}`;
+  if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ${prefix}`;
+  return `${seconds} second${seconds !== 1 ? 's' : ''} ${prefix}`;
+}
+
+function convert() {
+  const input = document.getElementById('convInput').value.trim();
+  const isUTC = document.getElementById('timezone').value === 'UTC';
+
+  let date;
+  try {
+    if (convMode === 'unix') {
+      let ts = input;
+      // Auto-detect seconds vs milliseconds
+      if (ts.length === 10 || ts.length === 13) {
+        date = new Date(parseInt(ts) * (ts.length === 10 ? 1000 : 1));
+      } else {
+        date = new Date(parseInt(ts) * 1000);
+      }
+    } else {
+      date = new Date(input);
+    }
+
+    if (isNaN(date.getTime())) {
+      showToast('Invalid date/timestamp', true);
+      return;
+    }
+
+    const seconds = Math.floor(date.getTime() / 1000);
+    const millis = date.getTime();
+
+    document.getElementById('rSeconds').textContent = seconds;
+    document.getElementById('rMillis').textContent = millis;
+    document.getElementById('rISO').textContent = date.toISOString();
+    document.getElementById('rUTC').textContent = date.toUTCString();
+    document.getElementById('rRelative').textContent = relativeTime(date);
+    showToast('Converted successfully');
+  } catch (e) {
+    showToast('Invalid input', true);
+  }
+}
+
+// Convert on load
+convert();
+</script>
+</body>
+</html>

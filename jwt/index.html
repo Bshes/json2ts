@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JWT Decoder - DevForge</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
+  .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #30363d; }
+  .logo { font-size: 24px; font-weight: 700; color: #58a6ff; }
+  .logo span { color: #f0f6fc; }
+  .back-link { color: #58a6ff; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+  .back-link:hover { text-decoration: underline; }
+  .pro-badge { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .panel { background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; margin-top: 20px; }
+  .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #1c2128; border-bottom: 1px solid #30363d; font-size: 14px; font-weight: 600; }
+  .panel-header .actions { display: flex; gap: 8px; }
+  textarea { width: 100%; height: 120px; background: transparent; border: none; color: #c9d1d9; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 13px; padding: 16px; resize: vertical; outline: none; }
+  textarea::placeholder { color: #484f58; }
+  .btn { padding: 6px 16px; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; cursor: pointer; font-size: 13px; transition: all .2s; }
+  .btn:hover { background: #30363d; }
+  .btn-primary { background: #238636; border-color: #2ea043; color: #fff; }
+  .btn-primary:hover { background: #2ea043; }
+  .jwt-parts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 20px; }
+  @media (max-width: 768px) { .jwt-parts { grid-template-columns: 1fr; } }
+  .jwt-part { background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; }
+  .jwt-part .header { padding: 8px 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .jwt-part .header.header-part { background: #1f6feb33; border-bottom: 1px solid #1f6feb; color: #58a6ff; }
+  .jwt-part .header.payload-part { background: #9e6a0333; border-bottom: 1px solid #d29922; color: #d29922; }
+  .jwt-part .header.signature-part { background: #3fb95033; border-bottom: 1px solid #3fb950; color: #3fb950; }
+  .jwt-part .content { padding: 12px; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+  .json-display { padding: 16px; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 13px; white-space: pre-wrap; }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #238636; color: #fff; padding: 12px 24px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .3s; z-index: 100; }
+  .toast.show { opacity: 1; }
+  .toast.error { background: #da3633; }
+  .footer { text-align: center; padding: 32px 0; color: #484f58; font-size: 13px; }
+  .footer a { color: #58a6ff; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <a href="../" class="back-link">← DevForge</a>
+    <div class="logo">JWT <span>Decoder</span></div>
+    <span class="pro-badge">Free</span>
+  </header>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span>JWT Token</span>
+      <div class="actions">
+        <button class="btn" onclick="document.getElementById('jwtInput').value='';document.getElementById('headerOut').textContent='';document.getElementById('payloadOut').textContent='';document.getElementById('signatureOut').textContent=''">Clear</button>
+        <button class="btn" onclick="document.getElementById('jwtInput').value=sampleJWT;decodeJWT()">Sample</button>
+      </div>
+    </div>
+    <textarea id="jwtInput" placeholder="Paste your JWT token here..." spellcheck="false"></textarea>
+    <div style="padding:8px 16px">
+      <button class="btn btn-primary" onclick="decodeJWT()">Decode</button>
+    </div>
+  </div>
+
+  <div class="jwt-parts" id="jwtParts">
+    <div class="jwt-part">
+      <div class="header header-part">Header (Algorithm & Token Type)</div>
+      <div class="content" id="headerOut"></div>
+    </div>
+    <div class="jwt-part">
+      <div class="header payload-part">Payload (Data)</div>
+      <div class="content" id="payloadOut"></div>
+    </div>
+    <div class="jwt-part">
+      <div class="header signature-part">Signature (Verify)</div>
+      <div class="content" id="signatureOut"></div>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;padding:12px;background:#161b22;border:1px solid #30363d;border-radius:8px;font-size:12px;color:#8b949e;text-align:center">
+    ⚠️ This tool only <strong>decodes</strong> JWTs. It does not verify the signature. Never paste tokens from untrusted sources.
+  </div>
+
+  <div class="footer">
+    Built by <a href="https://dev.to/bshes">@Bshes</a> &mdash; <a href="../">All DevForge tools</a>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const sampleJWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJyb2xlIjoidXNlciIsImV4cCI6MTg0NzM5OTA3NH0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function base64UrlDecode(str) {
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (str.length % 4) str += '=';
+  try { return decodeURIComponent(escape(atob(str))); } catch { return atob(str); }
+}
+
+function decodeJWT() {
+  const token = document.getElementById('jwtInput').value.trim();
+  if (!token) { showToast('Please paste a JWT token', true); return; }
+
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    showToast('Invalid JWT: must have 3 parts separated by dots', true);
+    return;
+  }
+
+  try {
+    const header = JSON.parse(base64UrlDecode(parts[0]));
+    const payload = JSON.parse(base64UrlDecode(parts[1]));
+    document.getElementById('headerOut').textContent = JSON.stringify(header, null, 2);
+    document.getElementById('payloadOut').textContent = JSON.stringify(payload, null, 2);
+    document.getElementById('signatureOut').textContent = parts[2];
+    showToast('JWT decoded successfully');
+  } catch (e) {
+    showToast('Failed to decode JWT: ' + e.message, true);
+  }
+}
+</script>
+</body>
+</html>

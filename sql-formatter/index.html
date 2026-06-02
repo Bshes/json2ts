@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQL Formatter - DevForge</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
+  .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #30363d; }
+  .logo { font-size: 24px; font-weight: 700; color: #58a6ff; }
+  .logo span { color: #f0f6fc; }
+  .back-link { color: #58a6ff; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+  .back-link:hover { text-decoration: underline; }
+  .pro-badge { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .panel { background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; margin-top: 20px; }
+  .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #1c2128; border-bottom: 1px solid #30363d; font-size: 14px; font-weight: 600; }
+  .panel-header .actions { display: flex; gap: 8px; }
+  textarea { width: 100%; height: 250px; background: transparent; border: none; color: #c9d1d9; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 13px; padding: 16px; resize: vertical; outline: none; tab-size: 2; }
+  textarea::placeholder { color: #484f58; }
+  .btn { padding: 6px 16px; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; cursor: pointer; font-size: 13px; transition: all .2s; }
+  .btn:hover { background: #30363d; }
+  .btn-primary { background: #238636; border-color: #2ea043; color: #fff; }
+  .btn-primary:hover { background: #2ea043; }
+  .options-row { display: flex; gap: 16px; padding: 8px 16px; background: #1c2128; border-bottom: 1px solid #30363d; font-size: 13px; align-items: center; flex-wrap: wrap; }
+  .options-row label { color: #8b949e; display: flex; align-items: center; gap: 6px; }
+  .options-row select { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 4px 8px; color: #c9d1d9; font-size: 13px; outline: none; }
+  .options-row select:focus { border-color: #58a6ff; }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #238636; color: #fff; padding: 12px 24px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .3s; z-index: 100; }
+  .toast.show { opacity: 1; }
+  .toast.error { background: #da3633; }
+  .footer { text-align: center; padding: 32px 0; color: #484f58; font-size: 13px; }
+  .footer a { color: #58a6ff; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <a href="../" class="back-link">← DevForge</a>
+    <div class="logo">SQL <span>Formatter</span></div>
+    <span class="pro-badge">Free</span>
+  </header>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span>SQL Input</span>
+      <div class="actions">
+        <button class="btn" onclick="document.getElementById('sqlInput').value='';clearOutput()">Clear</button>
+        <button class="btn" onclick="document.getElementById('sqlInput').value=samples.select;formatSQL()">SELECT</button>
+        <button class="btn" onclick="document.getElementById('sqlInput').value=samples.insert;formatSQL()">INSERT</button>
+      </div>
+    </div>
+    <div class="options-row">
+      <label>Indent: <select id="indentSize"><option value="2">2 spaces</option><option value="4" selected>4 spaces</option><option value="1">1 tab</option></select></label>
+      <label><input type="checkbox" id="uppercase" checked> Uppercase keywords</label>
+    </div>
+    <textarea id="sqlInput" placeholder="Paste your SQL here..." spellcheck="false">select u.id, u.name, count(o.id) as order_count from users u left join orders o on u.id = o.user_id where u.active = true group by u.id, u.name having count(o.id) > 0 order by order_count desc limit 10;</textarea>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span>Formatted SQL</span>
+      <div class="actions">
+        <button class="btn" onclick="copyOutput()">Copy</button>
+        <button class="btn btn-primary" onclick="formatSQL()">Format</button>
+      </div>
+    </div>
+    <textarea id="sqlOutput" placeholder="Formatted SQL will appear here..." readonly style="height:350px;cursor:default"></textarea>
+  </div>
+
+  <div class="footer">
+    Built by <a href="https://dev.to/bshes">@Bshes</a> &mdash; <a href="../">All DevForge tools</a>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const samples = {
+  select: `select u.id, u.name, u.email, count(o.id) as order_count, sum(o.total) as total_spent from users u inner join orders o on u.id = o.user_id where u.active = true and u.created_at > '2024-01-01' group by u.id, u.name, u.email having count(o.id) >= 5 order by total_spent desc limit 20 offset 0;`,
+  insert: `insert into users (name, email, role, active, created_at) values ('John Doe', 'john@example.com', 'admin', true, now()), ('Jane Smith', 'jane@example.com', 'user', true, now()) on conflict (email) do update set name = excluded.name, updated_at = now();`
+};
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function clearOutput() {
+  document.getElementById('sqlOutput').value = '';
+}
+
+const KEYWORDS = new Set([
+  'SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'NOT', 'IN', 'IS', 'NULL',
+  'INSERT', 'INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE',
+  'CREATE', 'TABLE', 'ALTER', 'DROP', 'INDEX', 'VIEW',
+  'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER', 'CROSS', 'ON',
+  'GROUP', 'BY', 'ORDER', 'ASC', 'DESC', 'HAVING',
+  'LIMIT', 'OFFSET', 'AS', 'DISTINCT', 'COUNT', 'SUM', 'AVG', 'MIN', 'MAX',
+  'CASE', 'WHEN', 'THEN', 'ELSE', 'END',
+  'LIKE', 'BETWEEN', 'EXISTS', 'UNION', 'ALL',
+  'WITH', 'RECURSIVE', 'RETURNING', 'CONFLICT', 'DO', 'NOTHING',
+  'TRUE', 'FALSE', 'NOW', 'COALESCE',
+  'AND', 'OR', 'ON', 'INTO', 'SET'
+]);
+
+function formatSQL() {
+  const input = document.getElementById('sqlInput').value.trim();
+  const output = document.getElementById('sqlOutput');
+  const uc = document.getElementById('uppercase').checked;
+  const indent = document.getElementById('indentSize').value === '1' ? '\t' : ' '.repeat(parseInt(document.getElementById('indentSize').value));
+
+  if (!input) { showToast('Please enter SQL', true); return; }
+
+  try {
+    let sql = input;
+    const keywords = /(SELECT|FROM|WHERE|AND|OR|INSERT\s+INTO|VALUES|UPDATE|SET|DELETE|CREATE\s+TABLE|ALTER|DROP|JOIN|LEFT\s+JOIN|RIGHT\s+JOIN|INNER\s+JOIN|OUTER\s+JOIN|CROSS\s+JOIN|ON|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT|OFFSET|AS|DISTINCT|CASE|WHEN|THEN|ELSE|END|LIKE|BETWEEN|EXISTS|UNION|ALL|WITH|RECURSIVE|RETURNING|ON\s+CONFLICT|DO\s+NOTHING|DO\s+UPDATE|NOT\s+IN|IS\s+NULL|IS\s+NOT\s+NULL|AND|OR)/gi;
+
+    // Normalize whitespace
+    sql = sql.replace(/\s+/g, ' ').trim();
+
+    // Split into clauses
+    let formatted = '';
+    const lines = [];
+    let depth = 0;
+
+    // Add newlines before major keywords
+    sql = sql.replace(/\b(SELECT|FROM|WHERE|INSERT\s+INTO|VALUES|UPDATE|SET|DELETE|CREATE\s+TABLE|ALTER|DROP|JOIN|LEFT\s+JOIN|RIGHT\s+JOIN|INNER\s+JOIN|OUTER\s+JOIN|CROSS\s+JOIN|ON|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT|OFFSET|UNION|WITH)\b/gi, '\n$1');
+
+    // Handle ON CONFLICT
+    sql = sql.replace(/\b(ON\s+CONFLICT)\b/gi, '\n$1');
+
+    // Add newline before AND/OR that are not in WHERE conditions (top level)
+    // Actually let's keep it simpler - just indent ON, AND, OR after JOIN/WHERE
+    const formattedLines = sql.split('\n').map(line => line.trim()).filter(Boolean);
+
+    for (let i = 0; i < formattedLines.length; i++) {
+      let line = formattedLines[i];
+      const upper = line.toUpperCase();
+
+      if (uc) {
+        // Uppercase keywords
+        line = line.replace(/\b(\w+)\b/g, (match) => {
+          return KEYWORDS.has(match.toUpperCase()) ? match.toUpperCase() : match;
+        });
+      }
+
+      if (upper.startsWith('SELECT') || upper.startsWith('FROM') || upper.startsWith('WHERE') ||
+          upper.startsWith('INSERT') || upper.startsWith('UPDATE') || upper.startsWith('DELETE') ||
+          upper.startsWith('CREATE') || upper.startsWith('ALTER') || upper.startsWith('DROP') ||
+          upper.startsWith('ORDER BY') || upper.startsWith('GROUP BY') || upper.startsWith('HAVING') ||
+          upper.startsWith('LIMIT') || upper.startsWith('OFFSET') || upper.startsWith('UNION') ||
+          upper.startsWith('WITH')) {
+        lines.push(line);
+      } else if (upper.startsWith('JOIN') || upper.startsWith('LEFT') || upper.startsWith('RIGHT') ||
+                 upper.startsWith('INNER') || upper.startsWith('OUTER') || upper.startsWith('CROSS')) {
+        lines.push(indent + line);
+      } else if (upper.startsWith('AND') || upper.startsWith('OR')) {
+        lines.push(indent + line);
+      } else if (upper.startsWith('ON')) {
+        lines.push(indent + line);
+      } else if (upper.startsWith('VALUES')) {
+        lines.push(indent + line);
+      } else if (upper.startsWith('ON CONFLICT') || upper.startsWith('DO')) {
+        lines.push(indent + line);
+      } else {
+        lines.push(line);
+      }
+    }
+
+    output.value = lines.join('\n');
+    showToast('SQL formatted successfully');
+  } catch (e) {
+    output.value = 'Error: ' + e.message;
+    showToast('Formatting error', true);
+  }
+}
+
+function copyOutput() {
+  const text = document.getElementById('sqlOutput').value;
+  if (!text) { showToast('Nothing to copy', true); return; }
+  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    showToast('Copied to clipboard');
+  });
+}
+</script>
+</body>
+</html>

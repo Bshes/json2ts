@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSV JSON Converter - DevForge</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
+  .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #30363d; }
+  .logo { font-size: 24px; font-weight: 700; color: #58a6ff; }
+  .logo span { color: #f0f6fc; }
+  .back-link { color: #58a6ff; text-decoration: none; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+  .back-link:hover { text-decoration: underline; }
+  .pro-badge { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .panel { background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; margin-top: 20px; }
+  .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #1c2128; border-bottom: 1px solid #30363d; font-size: 14px; font-weight: 600; }
+  .panel-header .actions { display: flex; gap: 8px; }
+  textarea { width: 100%; height: 300px; background: transparent; border: none; color: #c9d1d9; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 13px; padding: 16px; resize: vertical; outline: none; }
+  textarea::placeholder { color: #484f58; }
+  .btn { padding: 6px 16px; border-radius: 6px; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; cursor: pointer; font-size: 13px; transition: all .2s; }
+  .btn:hover { background: #30363d; }
+  .btn-primary { background: #238636; border-color: #2ea043; color: #fff; }
+  .btn-primary:hover { background: #2ea043; }
+  .tab-bar { display: flex; gap: 0; padding: 8px 16px; background: #1c2128; border-bottom: 1px solid #30363d; }
+  .tab { padding: 4px 16px; border: 1px solid #30363d; background: #161b22; color: #8b949e; cursor: pointer; font-size: 13px; }
+  .tab:first-child { border-radius: 4px 0 0 4px; }
+  .tab:last-child { border-radius: 0 4px 4px 0; }
+  .tab.active { background: #238636; color: #fff; border-color: #2ea043; }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #238636; color: #fff; padding: 12px 24px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .3s; z-index: 100; }
+  .toast.show { opacity: 1; }
+  .toast.error { background: #da3633; }
+  .footer { text-align: center; padding: 32px 0; color: #484f58; font-size: 13px; }
+  .footer a { color: #58a6ff; text-decoration: none; }
+  .options-row { display: flex; gap: 16px; padding: 8px 16px; background: #1c2128; border-bottom: 1px solid #30363d; font-size: 13px; align-items: center; }
+  .options-row select { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 4px 8px; color: #c9d1d9; font-size: 13px; outline: none; }
+  .options-row input[type="checkbox"] { accent-color: #58a6ff; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <a href="../" class="back-link">← DevForge</a>
+    <div class="logo">CSV <span>↔ JSON</span></div>
+    <span class="pro-badge">Free</span>
+  </header>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span>Input</span>
+      <div class="actions">
+        <button class="btn" onclick="document.getElementById('input').value=''">Clear</button>
+        <button class="btn" onclick="document.getElementById('input').value=samples.csv;convert('csv')">Sample CSV</button>
+        <button class="btn" onclick="document.getElementById('input').value=samples.json;convert('json')">Sample JSON</button>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab active" id="tabCsv" onclick="switchTab('csv')">CSV → JSON</div>
+      <div class="tab" id="tabJson" onclick="switchTab('json')">JSON → CSV</div>
+    </div>
+    <div class="options-row">
+      <label><input type="checkbox" id="firstRowHeader" checked> First row is header</label>
+      <label>Delimiter: <select id="delimiter"><option value=",">Comma</option><option value=";">Semicolon</option><option value="\t">Tab</option></select></label>
+    </div>
+    <textarea id="input" placeholder="Paste CSV or JSON here..." spellcheck="false"></textarea>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span>Output</span>
+      <div class="actions">
+        <button class="btn" onclick="copyOutput()">Copy</button>
+        <button class="btn btn-primary" onclick="doConvert()">Convert</button>
+      </div>
+    </div>
+    <textarea id="output" placeholder="Output will appear here..." readonly style="height:300px;cursor:default"></textarea>
+  </div>
+
+  <div class="footer">
+    Built by <a href="https://dev.to/bshes">@Bshes</a> &mdash; <a href="../">All DevForge tools</a>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+let mode = 'csv';
+
+const samples = {
+  csv: `name,email,age,role
+Alice Johnson,alice@example.com,28,Designer
+Bob Smith,bob@example.com,35,Engineer
+Carol Williams,carol@example.com,42,Manager`,
+  json: `[
+  {"name": "Alice Johnson", "email": "alice@example.com", "age": 28, "role": "Designer"},
+  {"name": "Bob Smith", "email": "bob@example.com", "age": 35, "role": "Engineer"}
+]`
+};
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function switchTab(tab) {
+  mode = tab;
+  document.getElementById('tabCsv').className = 'tab' + (tab === 'csv' ? ' active' : '');
+  document.getElementById('tabJson').className = 'tab' + (tab === 'json' ? ' active' : '');
+  document.getElementById('firstRowHeader').disabled = tab === 'json';
+  document.getElementById('delimiter').disabled = tab === 'json';
+}
+
+function parseCSV(text, hasHeader, delim) {
+  const lines = text.trim().split('\n').map(l => {
+    const row = [];
+    let current = '', inQuotes = false;
+    for (const ch of l) {
+      if (ch === '"') { inQuotes = !inQuotes; continue; }
+      if (ch === delim && !inQuotes) { row.push(current.trim()); current = ''; continue; }
+      current += ch;
+    }
+    row.push(current.trim());
+    return row;
+  });
+  const headers = hasHeader ? lines[0] : lines[0].map((_, i) => `col${i+1}`);
+  const data = hasHeader ? lines.slice(1) : lines;
+  return data.filter(r => r.some(c => c)).map(r => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = r[i] || ''; });
+    return obj;
+  });
+}
+
+function jsonToCSV(json, delim) {
+  const arr = Array.isArray(json) ? json : [json];
+  if (!arr.length) return '';
+  const headers = [...new Set(arr.flatMap(Object.keys))];
+  const esc = v => {
+    const s = String(v ?? '');
+    return s.includes(delim) || s.includes('"') || s.includes('\n') ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  return headers.join(delim) + '\n' + arr.map(r => headers.map(h => esc(r[h])).join(delim)).join('\n');
+}
+
+function doConvert() {
+  const input = document.getElementById('input').value.trim();
+  const output = document.getElementById('output');
+  if (!input) { showToast('Please enter some data', true); return; }
+  try {
+    if (mode === 'csv') {
+      const hasHeader = document.getElementById('firstRowHeader').checked;
+      const delim = document.getElementById('delimiter').value === '\t' ? '\t' : document.getElementById('delimiter').value;
+      const result = parseCSV(input, hasHeader, delim);
+      output.value = JSON.stringify(result, null, 2);
+      showToast('Converted CSV to JSON');
+    } else {
+      const delim = document.getElementById('delimiter').value === '\t' ? '\t' : document.getElementById('delimiter').value;
+      const parsed = JSON.parse(input);
+      const result = jsonToCSV(parsed, delim);
+      output.value = result;
+      showToast('Converted JSON to CSV');
+    }
+  } catch (e) {
+    output.value = 'Error: ' + e.message;
+    showToast('Conversion error', true);
+  }
+}
+
+function copyOutput() {
+  const text = document.getElementById('output').value;
+  if (!text) { showToast('Nothing to copy', true); return; }
+  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    showToast('Copied to clipboard');
+  });
+}
+</script>
+</body>
+</html>
